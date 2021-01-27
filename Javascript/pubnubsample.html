@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<!-- read receipts, signals/presence -->
+
+<head>
+  <title>PubNub JavaScript SDK QuickStart</title>
+</head>
+
+<body>
+  <div>
+    <form onclick="return false">
+      <strong id="uuid">Earth:</strong> <input id="update-text" type="input"
+        placeholder="enter update for Earth here" />
+      <input id="publish-button" type="submit" value="Submit" />
+      <input id="reset-counter" type="button" value="Reset" />
+      <strong>
+        Total message received count:
+        <strong id="totalMessageCount"></strong>
+      </strong>
+      <strong>
+        Total sent count:
+        <strong id="totalSentCount"></strong>
+      </strong>
+    </form>
+    <p><strong>Updates</strong></p>
+    <div id="messages-top" />
+  </div>
+</body>
+
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.29.8.min.js"></script>
+
+<script>
+  const messagesTop = document.getElementById('messages-top');
+  const updateText = document.getElementById('update-text');
+  const sendButton = document.getElementById('publish-button');
+  const resetButton = document.getElementById('reset-counter');
+  // number of channels in channel group
+  const maxNumberOfConversations = 300;
+
+  // number of messages to publish
+  const numOfMessages = 150;
+
+  const randomNumber = (maxValue) => Math.floor(Math.random() * maxValue) + 1;
+  let totalMessageCount = 0;
+  let sentMsgCount = 0;
+  let intervalCounter = 0;
+  sendButton.addEventListener('click', () => { submitUpdate(theEntry, updateText.value) });
+  resetButton.addEventListener('click', () => resetCount());
+
+  const clientUUID = 555; //PubNub.generateUUID();
+  // const theChannels = [...Array(randomNumber(maxNumberOfConversations))].map((v, i) => 'test_channel.' + i);
+  const theChannels = [...Array(maxNumberOfConversations)].map((v, i) => 'test_channel-' + i);
+
+  /** PUBNUB TEAM to review: **/
+  // const theChannels = [...Array(randomNumber(maxNumberOfConversations))].map((v, i) => 'test_channel.' + i + '.*'); // ?? - Maximum wildcard depth exceeded
+  // const theChannels = [...Array(2)].map((v, i) => 'conversation' + i + '.*'); // this works if we're nested at 2 levels not 3
+  const theEntry = clientUUID;
+
+  document.getElementById('uuid').textContent = theEntry;
+  console.log(theChannels);
+
+  const pubnub = new PubNub({
+    // replace the following with your own publish and subscribe keys
+    publishKey: 'PUBLISH_KEY',
+    subscribeKey: 'SUBSCRIBE_KEY',
+    cipherKey: "key",
+    useSecureConnections: true,
+    uuid: clientUUID
+  });
+  // pubnub.setFilterExpression("uuid != '" + clientUUID + "'"); // ?? - filter expressions in javascript don't seem to work
+
+  pubnub.addListener({
+    message: function (event) {
+      totalMessageCount++;
+      displayMessage('[MESSAGE: received - CHANNEL - ' + event.channel + ']',
+        event.message.entry + ': ' + event.message.update);
+    },
+    presence: function (event) {
+      displayMessage('[PRESENCE: ' + event.action + ']',
+        'uuid: ' + event.uuid + ', channel: ' + event.channel);
+    },
+    status: function (event) {
+      displayMessage('[STATUS: ' + event.category + ']',
+        'connected to channels: ' + event.affectedChannels);
+
+      if (event.category == 'PNConnectedCategory') {
+        //submitUpdate(theEntry, 'Ready to kick butt.');
+
+        // testing with message publish delay
+        // setInterval(() => {
+        //   if (intervalCounter < numOfMessages) {
+        //     submitUpdate(theEntry, intervalCounter.toString());
+        //     intervalCounter++;
+        //   }
+        //   intervalCounter = 0;
+        // }, 200);
+
+        runTest();
+      }
+    }
+  });
+
+  pubnub.channelGroups.addChannels({
+    channels: theChannels,
+    channelGroup: 'cg_' + clientUUID
+  }, function (status) {
+    console.log(status);
+  });
+
+  pubnub.subscribe({
+    channels: theChannels,
+    withPresence: true
+  });
+
+  submitUpdate = function (anEntry, anUpdate) {
+    pubnub.publish({
+      channel: theChannels[randomNumber(theChannels.length - 1)],
+      message: { 'entry': anEntry, 'update': anUpdate }
+    },
+      function (status, response) {
+        if (status.error) {
+          console.log(status)
+        }
+        else {
+          displayMessage('[PUBLISH: sent]',
+            'timetoken: ' + response.timetoken);
+
+          updateText.value = "";
+          sentMsgCount++;
+        }
+      });
+  };
+
+  displayMessage = function (messageType, aMessage) {
+    let pmessage = document.createElement('p');
+    let br = document.createElement('br');
+
+    messagesTop.after(pmessage);
+    pmessage.appendChild(document.createTextNode(messageType));
+    pmessage.appendChild(br);
+    pmessage.appendChild(document.createTextNode(aMessage));
+  }
+
+  setInterval(function () {
+    document.getElementById('totalMessageCount').textContent = totalMessageCount;
+    document.getElementById('totalSentCount').textContent = sentMsgCount;
+  }, 3000);
+
+  resetCount = function () {
+    totalMessageCount = 0;
+    sentMsgCount = 0;
+  }
+
+  runTest = function () {
+    for (var i = 0; i < numOfMessages; i++) {
+      console.count()
+      submitUpdate(theEntry, i.toString());
+    }
+    console.countReset();
+  }
+
+</script>
+
+</html>
