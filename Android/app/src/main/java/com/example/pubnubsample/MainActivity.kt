@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         listener = object : SubscribeCallback() {
             override fun status(pubnub: PubNub, pnStatus: PNStatus) {
                 Log.e("PubNub", pnStatus.toString())
+                Log.e("PubNub", "Thread: ${Thread.currentThread().id.toString()}")
 
                 last_status.text = pnStatus.toString()
             }
