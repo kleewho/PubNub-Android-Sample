@@ -5,15 +5,19 @@ import android.content.Intent
 import android.os.Bundle
 import kotlinx.android.synthetic.main.activity_conv.*
 import kotlinx.android.synthetic.main.activity_main.*
+import javax.inject.Inject
 
-class Conv: Activity() {
+class Conv : Activity() {
 
+    @Inject
+    lateinit var pubNubHolder: PubNubHolder
     private val channel: String by lazy { "meta.${(1..1000).random()}" }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        (applicationContext as MyApplication).appComponent.inject(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_conv)
-        MainActivity.pubnub.subscribe(channels = listOf(channel))
+        pubNubHolder.pubnub.subscribe(channels = listOf(channel))
         button.setOnClickListener {
             onClick()
         }
@@ -26,6 +30,6 @@ class Conv: Activity() {
 
     override fun onPause() {
         super.onPause()
-        MainActivity.pubnub.unsubscribe(channels = listOf(channel))
+        pubNubHolder.pubnub.unsubscribe(channels = listOf(channel))
     }
 }
